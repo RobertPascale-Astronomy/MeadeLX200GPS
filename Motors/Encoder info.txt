@@ -1,0 +1,7 @@
+The encoders used on the LX200GPS are US Digital E4-256-091-L.
+These are no longer made, and no stock exists according to customer support (email 1 Nov 2019).
+
+The replacement E4-T model does not have an equivalent that has the 091 bore diameter, so cannot act as a drop-in replacement. 
+They also have substantially different encoder wheel makeup, so swapping the encoder wheel from the old one to a new one won't work.
+
+The spec sheets for both of these are attached as PDFs.
