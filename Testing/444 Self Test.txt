@@ -1,0 +1,138 @@
+// Turn on scope while mashing the 4 key repeatedly immediately while booting
+//-------------------------------------------------------------------------------------------------
+BootTest(444) Test All Sensors/Ports
+
+  Hbx shows "Self-Test 1.0"  for approx 4 seconds
+  Energises Home and PEC sensors
+
+  //------------------------------------------------
+  Hbx shows "Reticle/Focuser/"
+            "12vDC Out TEST"
+  Turn on reticle port in flashing mode
+  loop
+    toggle Panel LED  on/off
+    toggle 12V port   on/off
+    move focusser     in/out
+  endloop when <Enter Up> detected
+  leave Panel Light On
+  leave 12V Port On
+
+  //------------------------------------------------
+  Hbx shows "Motor Test"  for approx 2 seconds
+  Reset "events trapping" variables
+  set speed to Max
+  loop
+    Hbx shows "RA=dddd"     // dddd is current encoder count as raw encoder transitions
+              "DEC=dddd"
+    check for a specific Hbx keydown or keyup code
+    // note, you can set speeds and use slew keys here
+    if <"1" Up> then Speed rate = 6.3
+    if <"2" Up> then Speed rate = 7.05
+    if <"3" Up> then Speed rate = 7.95
+    if <"4" Up> then Speed rate = 8.5
+    if <"5" Up> then Speed rate = 9
+    if <West Dn> )  then slew West
+    if <East Dn> )  then slew East
+    if <North Dn> ) then slew North
+    if <South Dn> ) then slew South
+    if <West Up> )  or <East Up> )  then stop slew and wait for 1 second
+    if <North Up> ) or <South Up> ) then stop slew and wait for 1 second
+
+    if we moved, the relevant <axis>=dddd will get updated to reflect new position
+    if the relevant PEC sensor tripped, the word "PEC" will be appended to each line accordingly
+  endloop when <Enter Up> detected
+
+  //------------------------------------------------
+  // Requires loopback/null modem connector  Tx1->Rx2,  Tx2->Rx1
+  Hbx shows "Serial Test"  for approx 4 seconds
+  set baud rate to 9.6k  on both UART channels
+  clear both buffers
+  testvar x1B := 0
+  loop
+    Hbx shows x1B ( as hex)        // x1B = 00 on first pass
+    x1A  := complement( x1B )      // x1A = FF on first pass
+    send x1B from Port 1
+    send x1A from Port 0
+    Grab byte from Port 0 and compare to x1B
+    Grab byte from Port 1 and compare to x1A
+  until pass or fail
+  Hbx shows "Passed Serial" or "Fail Serial"
+  wait until <Enter Up> detected
+
+  //------------------------------------------------
+  // Requires a button box or means to assert the ST4 pins
+  Hbx shows "Autoguider Test" for approx 2 seconds
+  loop
+    shows "N", "S", "E", "W" based on asserted pin
+    if all 4 options register correctly Hbx shows "PASSED"
+  endloop when <Enter Up> detected
+
+  //------------------------------------------------
+  Hbx shows "North/Level"
+  Enable Aux card and wait for 1/2 second
+  Ask for Aux to respond
+  if failed
+    Disable  Aux card and wait for 2 seconds
+    Hbx shows "Aux Fail" and we die
+  end
+  read data from Aux
+  if failed
+    Enable??  Aux card and wait for 2 seconds
+    Hbx shows "Aux Fail" and we die
+  end
+  // Once here the scope will "dynamically" report North/Level data
+  // Just loosen RA and DEC clutches and move OTA Up/Dn L/R as reqd
+  loop
+    Hbx shows "Below Level" or "Above Level"
+    Hbx shows "East" or "West"
+    if all 4 states have been accounted for, Hbx shows "PASSED"
+  endloop when <Enter Up> detected
+
+  //------------------------------------------------
+  Hbx shows "Home Sensor"
+  Disable  Aux Card
+  Flush Home Sensor data
+  // Once here the scope will "dynamically" report Home sensor data
+  // Just loosen RA and move the OTA L/R as reqd
+  loop
+    read encoders for event data
+    Hbx shows "Home Sen. = XX"
+    // Upper clear and lower clear gives 0      xxxx xx00       2=LoBlock , 1= UpBlock
+    //                       block       1      xxxx xx01
+    //       block           clear       2      xxxx xx10
+    //                       block       3      xxxx xx11
+    if all 4 events have been detected, Hbx shows "PASSED"
+  endloop when <Enter Up> detected
+
+  //------------------------------------------------
+  Enable  Aux Card and wait 1/2 second
+  Ask for Aux to respond
+  if failed
+    Disable  Aux card and wait for 1 second
+    Hbx shows "Aux Fail" and we die
+  end
+  Ask for GPS to respond
+  if failed
+    Enable??  Aux card and wait for 2 seconds
+    Hbx shows "Aux Fail" and we die
+  end
+
+  Hbx shows "Testing GPS" for 1 second
+  Tell Hbx to shut up
+  Hbx/GPS Baud Rate := 4800      // Note, this is not UART
+  Select GPS channel  ( vs Hbx )
+  loop
+    Watch for a set no of "G" s in the data stream
+  endloop on correct data or timeout
+
+  Select Hbx channel ( vs GPS )
+  Hbx/GPS Baud Rate := 9600
+  clear buffer
+  Tell Hbx it can talk again
+
+  Hbx shows "Passed GPS" or "Fail GPS"
+  wait until <Enter Up> detected
+
+  //------------------------------------------------
+  Hbx shows "Test Done"
+  die  // reboot
